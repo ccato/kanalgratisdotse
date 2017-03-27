@@ -1,8 +1,10 @@
 TITLE = 'KanalGratisDotSE'
 PREFIX = '/video/kanalgratisdotse'
+NS = {'atom': 'http://www.w3.org/2005/Atom','media':'http://search.yahoo.com/mrss/'}
 
 ICON = 'icon-default.png'
-URL = 'https://www.youtube.com/feeds/videos.xml?channel_id=UCwTrHPEglCkDz54iSg9ss9Q'
+URL = 'https://www.youtube.com/feeds/videos.xml?user=kanalgratisdotse'
+
 
 ####################################################################################################
 def Start():
@@ -12,22 +14,18 @@ def Start():
 ####################################################################################################
 @handler('/video/kanalgratisdotse', 'KanalGratisDotSE')
 def MainMenu():
+    oc = ObjectContainer()
     feed = XML.ElementFromURL(URL)
 
-    for entries in feed.xpath('//feed/entry'):
-        for entry in entries:
-            title = entry.xpath('./media:group/media:title/text()')[0]
-            url = entry.xpath('./link/@href')[0]
-            thumb = entry.xpath('./media:thumbnail/@url')[0]
-            desc = entry.xpath('./media:description/text()')[0]
-            date = entry.xpath('./published/text()')[0]
-
+    for entry in feed.xpath('/atom:feed/atom:entry', namespaces=NS):
+        try:
             oc.add(VideoClipObject(
-                url=url,
-                title=title,
-                thumb=Resource.ContentsOfURLWithFallback(url=thumb),
-                summary = desc,
-                originally_available_at = date
+                url=entry.xpath('./atom:link/@href', namespaces=NS)[0],
+                title=entry.xpath('./media:group/media:title/text()', namespaces=NS)[0],
+                thumb=Resource.ContentsOfURLWithFallback(url=entry.xpath('./media:group/media:thumbnail/@url', namespaces=NS)[0]),
+                summary=entry.xpath('./media:group/media:description/text()', namespaces=NS)[0],
+                originally_available_at=Datetime.ParseDate(entry.xpath('./atom:published/text()', namespaces=NS)[0])
             ))
+        except Exception, e:
+            Log("Error: %s" % str(e))
     return oc
-
